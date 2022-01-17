@@ -3,11 +3,10 @@ from flask_cors import CORS
 import datetime
 from flask import render_template
 import requests
+import re
 
 app = Flask(__name__)
 CORS(app)
-global tokenID
-tokenID = 0
 
 def createMetadata(grade, img):
     url = "https://metadata-api.klaytnapi.com/v1/metadata"
@@ -60,11 +59,12 @@ def API():
     print(params,type(params))
     if params["grade"]:
         metaURI = createMetadata(params["grade"],params["img"])
-        return metaURI
-        # global tokenID
-        # tokenID += 1
-        # result = mintNFT(metaURI,str(tokenID)+str(datetime.datetime.today().year)[2:])
-        # return result
+        #KAS에서 토큰을 발행할 때 토큰 아이디는 무조건 16진수여야 한다 현재시간을 일렬로 정수형만 추출해 16진수로 변환시켜서 호출한다.
+        hex_tokenID = hex(int('0x'+re.sub(r'[^0-9]', '',str(datetime.datetime.now())),16))
+        print(hex_tokenID)
+        result = mintNFT(metaURI,hex_tokenID)
+        print(result)
+        return result
     else:
         return params
 
