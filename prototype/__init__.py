@@ -52,7 +52,7 @@ def mintNFT(uri, tokenID):
     response = requests.request("POST", url, json=payload, headers=headers)
     return response.json()
 
-@app.route('/test', methods = ['POST'])
+@app.route('/nftMint', methods = ['POST'])
 
 def API():
     params = request.get_json()
