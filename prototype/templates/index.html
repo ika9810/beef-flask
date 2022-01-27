@@ -28,6 +28,7 @@
           }
           setTimeout(showClock,1000);  //1초마다 갱신
         }
+        document.write(Math.random() * 99 + 1 + '<h2>');
       </script>
 </head>
 <body onload="showClock()">
@@ -35,6 +36,7 @@
  
     </div>
     <h1>Hello, world!</h1>
+    
     <script src="{{ url_for('static', filename='js/prototype.js') }}"></script>
   </body>
 </html>
