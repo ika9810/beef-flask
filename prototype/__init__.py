@@ -56,7 +56,7 @@ def mintNFT(uri, tokenID):
 
 def API():
     params = request.get_json()
-    print(params,type(params))
+    #print(params,type(params))
     if params["grade"]:
         metaURI = createMetadata(params["grade"],params["img"])
         #KAS에서 토큰을 발행할 때 토큰 아이디는 무조건 16진수여야 한다 현재시간을 일렬로 정수형만 추출해 16진수로 변환시켜서 호출한다.
