@@ -46,7 +46,9 @@ def createMetadata(grade, img):
     return response.json()["uri"]
 
 def mintNFT(uri, tokenID):
-    url = "https://kip17-api.klaytnapi.com/v1/contract/0xe3a390fdb12dafe2eb37d7829d11a18f37e59424/token"
+    #url = "https://kip17-api.klaytnapi.com/v1/contract/0xe3a390fdb12dafe2eb37d7829d11a18f37e59424/token" #beefcoin
+    url = "https://kip17-api.klaytnapi.com/v1/contract/0xe966c58075372c9ddeb2d07080075f32d053f463/token" #maidcat
+    
 
     payload = {
         "to": "0x24b2803c34b11740acd0cc35648e34163c5cba0c",
