@@ -1,21 +1,98 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import datetime
 import time
 from flask import render_template
 import requests
 import re
+######################AI MODEL###########################
+from sklearn.decomposition import PCA
+
+import numpy as np
+from PIL import Image
+import joblib
+from io import BytesIO
+import base64
+#########################################################
 
 app = Flask(__name__)
 CORS(app)
 
+######################AI MODEL###########################
+def evaluate_grade(img):
+    # path = './prototype/static/img/image.jpeg'
+    # image_pil = Image.open(path)
+    #https://stackoverflow.com/questions/26070547/decoding-base64-from-post-to-use-in-pil base64 Image 활용
+    image_pil = Image.open(BytesIO(base64.b64decode(img)))
+    image = np.array(image_pil)
+
+    xaverage=image.shape[0]
+    yaverage=image.shape[1]
+    #한변의 길이의 절반
+    halfpicsize=150
+
+    #target이미지가 원본사진을 이탈하는것 방지
+    if yaverage<halfpicsize+10:
+        yaverage=halfpicsize+10
+    elif yaverage>len(image)-(halfpicsize+10):
+        yaverage=len(image)-(halfpicsize+10)
+
+    if xaverage<(halfpicsize+10):
+        xaverage=(halfpicsize+10)
+    elif xaverage>len(image[0])-(halfpicsize+10):
+        xaverage=len(image[0])-(halfpicsize+10)
+
+
+    #300*300 cutting    
+    cutimage=image_pil.crop((xaverage-halfpicsize,yaverage-halfpicsize,xaverage+halfpicsize,yaverage+halfpicsize))
+    #300*300=>50*50 resizing
+    resizedcutimage=np.array(cutimage.resize((50,50),Image.LANCZOS))
+    #3차원=>2차원
+    resizedcutimage=np.concatenate(resizedcutimage)
+    #2차원=>1차원
+    resizedcutimage=np.concatenate(resizedcutimage)
+
+    #target 데이터 저장
+    j=[]
+    j.append(resizedcutimage)
+    
+     
+    #300*300 target cutting기준
+    #K-neighbor모델을 위한 pca모델
+    pca31=joblib.load('./prototype/static/ai_model/pca_component31.pkl')
+    
+    #target data 변환
+    #K-neighbor 전용
+    k=pca31.transform(j)
+    j=[]
+    
+   
+    
+    #모델 불러오기
+    loaded_kn15_model=joblib.load( './prototype/static/ai_model/pca_knn_neighbor15.pkl')
+
+    #print("KN-15모델 예측")
+    #print(loaded_kn15_model.predict(k))
+    #print(loaded_kn15_model.classes_)
+    #print(loaded_kn15_model.predict_proba(k))
+    
+    result=[]
+    
+    for i in range(5):
+        newdict={}
+        newdict["className"]=loaded_kn15_model.classes_[i]
+        newdict["probability"]=loaded_kn15_model.predict_proba(k)[0][i]
+        result.append(newdict)
+    return result
+
+######################메타데이터 생성하기###########################
 def createMetadata(grade, img):
     url = "https://metadata-api.klaytnapi.com/v1/metadata"
     payload = {
         "metadata": {
             "description": "Beef NFT는 AI 소고기 등급 판별기를 통해 발행된 NFT로 AI 기반으로 소고기 이미지를 통해 소고기의 등급을 판별한 후 판별된 등급을 NFT에 저장해 인증서를 발급한다.",
             "external_url": "https://beef.honeyvuitton.com/", 
-            "image": "https://gateway.pinata.cloud/ipfs/QmXpEti7gYyd6aM3UXERr4v7QDkMg3mFJwyVkH3EagwU69?preview=1", 
+            "image": img, 
             "name": "Beef NFT",
             #Opensea에서 property 에 등록될 수 있는 형식으로 바꾸어 줬고, NFT의 생성일자도 birthday형식으로 지정했는데 이 때 unix timestamp형식이 필요해서 해당 형식에 맞게 진행하였다.
             "attributes": [{
@@ -46,8 +123,8 @@ def createMetadata(grade, img):
     return response.json()["uri"]
 
 def mintNFT(uri, tokenID):
-    #url = "https://kip17-api.klaytnapi.com/v1/contract/0xe3a390fdb12dafe2eb37d7829d11a18f37e59424/token" #beefcoin
-    url = "https://kip17-api.klaytnapi.com/v1/contract/0xe966c58075372c9ddeb2d07080075f32d053f463/token" #maidcat
+    url = "https://kip17-api.klaytnapi.com/v1/contract/0xe3a390fdb12dafe2eb37d7829d11a18f37e59424/token" #beefcoin
+    #url = "https://kip17-api.klaytnapi.com/v1/contract/0xe966c58075372c9ddeb2d07080075f32d053f463/token" #maidcat
     
 
     payload = {
@@ -66,7 +143,7 @@ def mintNFT(uri, tokenID):
 
 @app.route('/nftMint', methods = ['POST'])
 
-def API():
+def MINT():
     params = request.get_json()
     #print(params,type(params))
     if params["grade"]:
@@ -79,6 +156,15 @@ def API():
         return result
     else:
         return params
+
+@app.route('/predict', methods = ['POST'])
+
+def ai():
+    params = request.get_json()
+
+    result = evaluate_grade(params['img'])
+    #########################json 형식으로 리턴하기 위해 jsonify 함수 사용
+    return jsonify(result)
 
 @app.route("/")
 def intro():
